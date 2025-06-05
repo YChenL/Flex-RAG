@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="mmrag",
+    name="flexrag",
     version="0.1.0",
     description="Multi-modal RAG pipeline using LangChain and BLIP captions",
     author="Yangfu Li",
@@ -9,6 +9,7 @@ setup(
     packages=find_packages(),
     python_requires='>=3.9',
     install_requires=[
+        "magic-pdf[full]",
         "rank_bm25",
         "numpy==1.26.4",
         "scipy==1.11.4",
