@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 setup(
     name="flexrag",
     version="0.1.0",
-    description="Multi-modal RAG pipeline using LangChain and BLIP captions",
+    description="A flexible framework for RAG engineering",
     author="Yangfu Li",
     author_email="yfli_cee@stu.ecnu.edu.cn",
     packages=find_packages(),
