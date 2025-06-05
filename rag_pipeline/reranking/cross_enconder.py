@@ -1,4 +1,4 @@
-import os, torch
+import os, torch, pathlib
 from tqdm import tqdm
 from typing import List, Tuple
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -7,13 +7,19 @@ from langchain.docstore.document import Document
 from .utils import classify_block  
 
 
+# 本地模型路径
+LOCAL_MODEL_DIR = pathlib.Path(
+    "/data/yfli/code/Flex-RAG/models/MiniLM-L-6-v2"
+).expanduser()
+if not LOCAL_MODEL_DIR.exists():
+    raise FileNotFoundError(f"模型目录不存在: {LOCAL_MODEL_DIR}")
 
-# 1) 初始化评分器
-MODEL_NAME   = os.getenv("CROSS_ENCODER_MODEL", "cross-encoder/ms-marco-MiniLM-L-6-v2")
-DEVICE       = "cuda" if torch.cuda.is_available() else "cpu"
-cross_encoder = CrossEncoder(MODEL_NAME, device=DEVICE)
+# 初始化Cross-Encoder
+DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
+cross_encoder = CrossEncoder(str(LOCAL_MODEL_DIR), device=DEVICE)
 
-# 2) 单块评分（文本/媒体统一，只用 page_content）
+
+# 单块评分（文本/媒体统一，只用 page_content）
 MAX_LEN = 512        # 适当截断，防止超长度
 
 def ce_score_block(query: str, block: Document) -> float:
