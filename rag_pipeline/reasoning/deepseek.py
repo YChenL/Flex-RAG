@@ -37,16 +37,23 @@ def DeepSeek(query: str,
     return response
 
 
-def DeepSeek_Stream(prompt_input: str,
+def DeepSeek_Stream(query: str,
+                    top_text_parents: str,
+                    top_media_parents: str,
+                    top_equations: str,
                     model: str = "deepseek-reasoner", # R1, "deepseek-chat" v3,    
                     max_tokens: int = 64 * 1024,
                     temperature: float = 0.7) -> Tuple[Iterator[str], "callable"]:
-    
+
     """
     返回 (token_iterator, done)：
           token_iterator — 逐 token 字符串，可直接 for 循环 / yield 给前端
           done()         — 调用后得到完整回复文本（已自动累计）
     """
+  
+    # build llm input
+    prompt_input = build_retrieval_prompt(query, top_text_parents, top_media_parents, top_equations)
+
     deepseek_key = os.getenv("DEEPSEEK_API_KEY")
     if not deepseek_key:
         raise RuntimeError("DEEPSEEK_API_KEY 未设置")
@@ -66,21 +73,46 @@ def DeepSeek_Stream(prompt_input: str,
     )
 
     # ------------------
-    full_text_parts = []
-
-    def _iter_tokens() -> Iterator[str]:
-        for chunk in stream_resp:                     # ChatCompletionChunk
+    reasoning_parts, answer_parts = [], []
+    def _iter_tokens():
+        for chunk in stream_resp:
             delta = chunk.choices[0].delta
-            if hasattr(delta, "content") and delta.content:
-                token = delta.content
-                full_text_parts.append(token)
-                yield token                           
+            if getattr(delta, "reasoning_content", None):
+                tok = delta.reasoning_content
+                reasoning_parts.append(tok)
+                yield tok                           # 推理 token
+            elif getattr(delta, "content", None):
+                tok = delta.content
+                answer_parts.append(tok)
+                yield tok     
                 
+    
+    def _iter_tokens() -> Iterator[str]:
+        thinking = True          # True → 正在输出 reasoning_content
+        for chunk in stream_resp:
+            delta = chunk.choices[0].delta
 
-    def _done() -> str:
-        """运行完后再获取完整字符串"""
-        return "".join(full_text_parts)
+            # 1) 思维链阶段
+            if hasattr(delta, "reasoning_content") and delta.reasoning_content:
+                token = delta.reasoning_content
+                reasoning_parts.append(token)        # 需要时可分开累积
+                yield token                          # or yield f"[THINK]{token}"
+                continue
 
+            # 2) 正文阶段
+            if hasattr(delta, "content") and delta.content:
+                if thinking:                         # 思维链刚结束，插入分隔
+                    thinking = False
+                    yield "\n--- 🤔 思考完毕，以下为回答 ---\n"
+                token = delta.content
+                answer_parts.append(token)
+                yield token
+
+    
+    def _done() -> Tuple[str, str]:
+        return "".join(reasoning_parts), "".join(answer_parts)
+
+    
     return _iter_tokens(), _done
 
 
