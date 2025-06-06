@@ -9,31 +9,52 @@ from langchain_community.embeddings import HuggingFaceEmbeddings
 
 
 class Hybrid_Retriever():
-    def __init__(self, children, parents, configs):
-        # building FAISS vector bases
+    """
+    混合（Dense + BM25）检索器
+    - 支持两种初始化方式：
+        1) Hybrid_Retriever((children, parents), configs)
+        2) Hybrid_Retriever(flat_chunks,        configs)   # parents 置空
+    """
+
+    def __init__(
+        self,
+        chunks: "List[Document] | Tuple[List[Document], List[Document]]",
+        configs: dict
+    ):
+        # 解析输入
+        if isinstance(chunks, tuple):
+            self.children, self.parents = chunks      
+        else:
+            self.children = chunks                    
+            self.parents  = []                         
+
         self.configs = configs
-        self.children = children
-        self.parents  = parents
+
+        # 初始化嵌入模型
         embeddings = HuggingFaceEmbeddings(
-            model_name   = configs["DENSE_MODEL"], #检索算法模型路径，如Flex-RAG/models/e5-large-v2；Flex-RAG/models/Qwen3-Embedding-8B
-            model_kwargs = {
+            model_name=configs["DENSE_MODEL"],
+            model_kwargs={
                 "device": "cuda" if torch.cuda.is_available() else "cpu",
                 "local_files_only": True,
-                "trust_remote_code": True     # 必须 for Qwen3 pooling:contentReference[oaicite:1]{index=1}
+                "trust_remote_code": True        
             }
         )
-    
-        INDEX_DIR = Path(configs["INDEX_PATH"])      #Path("faiss_index") 
-        if INDEX_DIR.exists():
-            vectordb = FAISS.load_local(str(INDEX_DIR), embeddings)
+
+        # 构建 FAISS 索引
+        index_dir = Path(configs["INDEX_PATH"])
+        if index_dir.exists():
+            vectordb = FAISS.load_local(str(index_dir), embeddings)
         else:
-            vectordb = FAISS.from_documents(children, embeddings)
-            vectordb.save_local(str(INDEX_DIR))
+            vectordb = FAISS.from_documents(self.children, embeddings)
+            vectordb.save_local(str(index_dir))
 
-        self.dense_retriever = vectordb.as_retriever(search_kwargs={"k": configs["DENSE_PICK"]})
+        self.vectordb        = vectordb
+        self.dense_retriever = vectordb.as_retriever(
+            search_kwargs={"k": configs["DENSE_PICK"]}
+        )
 
-        #---------------------------------------------------------
-        corpus_tokens = [c.page_content.split() for c in children]
+        # 构建 BM25 语料
+        corpus_tokens = [c.page_content.split() for c in self.children]
         self.bm25 = BM25Okapi(corpus_tokens)
 
 

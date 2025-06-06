@@ -6,7 +6,7 @@ from langchain.docstore.document import Document
 
 
 
-class Sparse_Retriever():
+class Sparse_Retriever_bm25():
     """
     仅使用 BM25 的稀疏检索器
     -------------------------------------------------
@@ -17,13 +17,27 @@ class Sparse_Retriever():
         k_parent    — 文本过滤后 parent top-k
         CHUNK_PICK  — 平坦检索时 chunk top-k  (可选；缺省用 BM25_PICK)
     """
-    # 初始化：构建 BM25 语料
-    def __init__(self, children: List[Document], parents: List[Document], configs: dict):
-        self.children = children
-        self.parents  = parents
-        self.configs  = configs
 
-        corpus_tokens = [c.page_content.split() for c in children]
+    # ----------------------- 初始化：构建 BM25 语料 -----------------------
+    def __init__(self,
+                 chunks: "List[Document] | Tuple[List[Document], List[Document]]",
+                 configs: dict):
+        """
+        chunks 可以是：
+        1) 平坦切分：   flat_chunks
+        2) 层次切分：   (children, parents)
+        """
+        # 解析输入
+        if isinstance(chunks, tuple):
+            self.children, self.parents = chunks         
+        else:
+            self.children = chunks                       
+            self.parents  = []                            
+
+        self.configs = configs
+
+        # 构建 BM25 索引
+        corpus_tokens = [c.page_content.split() for c in self.children]
         self.bm25 = BM25Okapi(corpus_tokens)
 
     
