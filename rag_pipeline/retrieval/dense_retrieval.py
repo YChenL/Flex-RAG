@@ -15,10 +15,13 @@ class Dense_Retriever():
         self.parents  = parents
         self.configs  = configs
 
-    
         embeddings = HuggingFaceEmbeddings(
-            model_name   = configs["DENSE_MODEL"],
-            model_kwargs = {"local_files_only": True}
+            model_name   = configs["DENSE_MODEL"], #检索算法模型路径，如Flex-RAG/models/e5-large-v2；Flex-RAG/models/Qwen3-Embedding-8B
+            model_kwargs = {
+                "device": "cuda" if torch.cuda.is_available() else "cpu",
+                "local_files_only": True,
+                "trust_remote_code": True     # 必须 for Qwen3 pooling:contentReference[oaicite:1]{index=1}
+            }
         )
 
         index_dir = Path(configs["INDEX_PATH"])
