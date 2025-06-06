@@ -64,7 +64,7 @@ class Dense_Retriever():
         k = k or self.configs.get("CHUNK_PICK", self.configs["DENSE_PICK"])
         chunk_hits = self.vectordb.similarity_search(query, k=k)
         
-        stats = Counter(d.metadata.get("type", "text") for d in chunk_hits)
+        stats = Counter(d.metadata["type"] for d in chunk_hits)
         print(
             f"稠密检索到 {len(chunk_hits)} 个 chunk："
             f"{stats.get('text',0)} 段文本，"

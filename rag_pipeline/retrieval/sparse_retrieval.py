@@ -82,6 +82,28 @@ class Sparse_Retriever_bm25():
         parent_hits = [self.parents[i] for i in set(parent_ids)]
         return child_hits, parent_hits
 
+
+    # ------------------------------------------------------------------
+    def sparse_retrieve_chunks(self, query: str, k: int | None = None) -> List[Document]:
+        """
+        对“平坦切分”的 chunks 直接做 BM25：
+            - 不映射父块
+            - k 默认为 configs['CHUNK_PICK'] 或 BM25_PICK
+        """
+        k = k or self.configs.get("CHUNK_PICK", self.configs["BM25_PICK"])
+        scores   = self.bm25.get_scores(query.split())
+        top_idx  = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:k]
+        chunk_hits = [self.children[i] for i in top_idx]
+
+        cnt = Counter(ch.metadata["type"] for ch in chunk_hits)
+        print(
+            f"BM25 检索到 {len(chunk_hits)} 个 chunk："
+            f"{cnt.get('text',0)} 段文本，"
+            f"{cnt.get('image',0)} 张图像，"
+            f"{cnt.get('table',0)} 个表格"
+        )
+        return chunk_hits
+
     
     # ------------------------------------------------------------------
     def sparse_retrieve_parents(self, query: str) -> List[Document]:
@@ -95,28 +117,6 @@ class Sparse_Retriever_bm25():
             f"{cnt.get('table',0)} 个表格"
         )
         return parent_hits
-
-    
-    # ------------------------------------------------------------------
-    def bm25_retrieve_chunks(self, query: str, k: int | None = None) -> List[Document]:
-        """
-        对“平坦切分”的 chunks 直接做 BM25：
-            - 不映射父块
-            - k 默认为 configs['CHUNK_PICK'] 或 BM25_PICK
-        """
-        k = k or self.configs.get("CHUNK_PICK", self.configs["BM25_PICK"])
-        scores   = self.bm25.get_scores(query.split())
-        top_idx  = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:k]
-        chunk_hits = [self.children[i] for i in top_idx]
-
-        cnt = Counter(ch.metadata.get("type", "text") for ch in chunk_hits)
-        print(
-            f"BM25 检索到 {len(chunk_hits)} 个 chunk："
-            f"{cnt.get('text',0)} 段文本，"
-            f"{cnt.get('image',0)} 张图像，"
-            f"{cnt.get('table',0)} 个表格"
-        )
-        return chunk_hits
 
     
     # 公式关联 / 预览

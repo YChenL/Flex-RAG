@@ -167,7 +167,7 @@ class Hybrid_Retriever():
 
         # 3) 合并去重（保序：先 dense，再 sparse 新增） ------------
         results = self.merge_chunks(dense_hits, sparse_hits)
-        type_counter = Counter(ch.metadata.get("type", "text") for ch in results)
+        type_counter = Counter(ch.metadata["type"] for ch in results)
         print(
             f"合并后共 {len(results)} 个唯一块，"
             f"{type_counter.get('text', 0)} 段文本，"
@@ -205,7 +205,7 @@ class Hybrid_Retriever():
         )
 
         results = self.merge_chunks(dense_parents, sparse_parents)
-        type_counter = Counter(ch.metadata.get["type"] for ch in results)
+        type_counter = Counter(ch.metadata["type"] for ch in results)
         print(
             f"合并后共 {len(results)} 个唯一 parents，"
             f"{sparse_counter.get('parent',0)+sparse_counter.get('text',0)} 段文本，"
