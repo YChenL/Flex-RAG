@@ -43,7 +43,9 @@ class Hybrid_Retriever():
         # 构建 FAISS 索引
         index_dir = Path(configs["INDEX_PATH"])
         if index_dir.exists():
-            vectordb = FAISS.load_local(str(index_dir), embeddings)
+            vectordb = FAISS.load_local(str(index_dir), 
+                                        embeddings,
+                                        allow_dangerous_deserialization=True)
         else:
             vectordb = FAISS.from_documents(self.children, embeddings)
             vectordb.save_local(str(index_dir))
