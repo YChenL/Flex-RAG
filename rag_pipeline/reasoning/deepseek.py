@@ -1,12 +1,20 @@
 import os
 from openai import OpenAI
 from typing import Iterator, Tuple
+from .utils import build_retrieval_prompt
 
 
-def deepseek(prompt_input: str,
+
+def DeepSeek(query: str,
+             top_text_parents: str,
+             top_media_parents: str,
+             top_equations: str,
              model: str = "deepseek-reasoner", # R1, "deepseek-chat" v3,
              max_tokens: int = 64 * 1024,
              temperature: float = 0.7):
+
+    # build llm input
+    prompt_input = build_retrieval_prompt(query, top_text_parents, top_media_parents, top_equations)
     
     # llm reasoning
     print("------------llm reasoning--------------")
@@ -29,7 +37,7 @@ def deepseek(prompt_input: str,
     return response
 
 
-def deepseek_stream(prompt_input: str,
+def DeepSeek_Stream(prompt_input: str,
                     model: str = "deepseek-reasoner", # R1, "deepseek-chat" v3,    
                     max_tokens: int = 64 * 1024,
                     temperature: float = 0.7) -> Tuple[Iterator[str], "callable"]:
