@@ -4,8 +4,8 @@ from typing import List, Tuple
 from rank_bm25 import BM25Okapi
 from collections import Counter, defaultdict
 from langchain.docstore.document import Document
-from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain.vectorstores import FAISS
+from langchain_huggingface import HuggingFaceEmbeddings
 
 
 
@@ -34,9 +34,11 @@ class Dense_Retriever():
                 "device": "cuda" if torch.cuda.is_available() else "cpu",
                 "local_files_only": True,
                 "trust_remote_code": True                # Qwen3 需开启；对 e5 无副作用
-            }
+            },
+            encode_kwargs={"batch_size": configs["BATCH"]}
         )
 
+        
         # 构建 / 加载 FAISS 索引
         index_dir = Path(configs["INDEX_PATH"])
         if index_dir.exists():
