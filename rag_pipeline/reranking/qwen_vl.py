@@ -88,7 +88,7 @@ class Qwenvl_Reranker():
         chunks: List[Document],
         n_text: int,
         n_media: int,
-        batch: int = 8
+        batch: int = 5 # batch <= 6
     ) -> Tuple[List[Document], List[Document]]:
         """
         对同质 chunks（无 parent_id）做 LLM 相关性重排。
@@ -134,7 +134,7 @@ class Qwenvl_Reranker():
         parents: List[Document],
         n_text: int,
         n_media: int,
-        batch: int = 8
+        batch: int = 5 # batch <= 6
     ) -> Tuple[List[Document], List[Document]]:
         """
         对层次式父块列表做 LLM 相关性重排：
