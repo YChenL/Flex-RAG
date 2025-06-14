@@ -72,39 +72,35 @@ def DeepSeek_Stream(query: str,
 
     # ------------------
     reasoning_parts, answer_parts = [], []
-    # def _iter_tokens():
-    #     for chunk in stream_resp:
-    #         delta = chunk.choices[0].delta
-    #         if getattr(delta, "reasoning_content", None):
-    #             tok = delta.reasoning_content
-    #             reasoning_parts.append(tok)
-    #             yield tok                           # 推理 token
-    #         elif getattr(delta, "content", None):
-    #             tok = delta.content
-    #             answer_parts.append(tok)
-    #             yield tok     
-                
-    
     def _iter_tokens() -> Iterator[str]:
-        thinking = True          # True → 正在输出 reasoning_content
+        """
+        1) 推理阶段先输出 <think>…</think> 包裹的思考 token
+        2) 后续正文直接输出
+        """
+        thinking_started = False         # 是否已输出 <think>
+        thinking_ended   = False         # 是否已输出 </think>
+
         for chunk in stream_resp:
             delta = chunk.choices[0].delta
 
-            # 1) 思维链阶段
-            if hasattr(delta, "reasoning_content") and delta.reasoning_content:
-                token = delta.reasoning_content
-                reasoning_parts.append(token)        # 需要时可分开累积
-                yield token                          # or yield f"[THINK]{token}"
+            # ---------- 思考阶段 ----------
+            if getattr(delta, "reasoning_content", None):
+                if not thinking_started:
+                    thinking_started = True
+                    yield "<think>"                     # 开始标签
+                tok = delta.reasoning_content
+                reasoning_parts.append(tok)
+                yield tok
                 continue
 
-            # 2) 正文阶段
-            if hasattr(delta, "content") and delta.content:
-                if thinking:                         # 思维链刚结束，插入分隔
-                    thinking = False
-                    yield "\n--- 🤔 思考完毕，以下为回答 ---\n"
-                token = delta.content
-                answer_parts.append(token)
-                yield token
+            # ---------- 正文阶段 ----------
+            if getattr(delta, "content", None):
+                if thinking_started and not thinking_ended:
+                    thinking_ended = True
+                    yield "</think>"                    # 结束标签
+                tok = delta.content
+                answer_parts.append(tok)
+                yield tok
 
     
     def _done() -> Tuple[str, str]:
